@@ -1,0 +1,1 @@
+pluginManagement{repositories{google();mavenCentral();gradlePluginPortal()}}\ndependencyResolutionManagement{repositories{google();mavenCentral()}}\nrootProject.name="ReyKizen"\ninclude ":app"

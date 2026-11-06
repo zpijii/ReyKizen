@@ -1,0 +1,1 @@
+plugins{id "com.android.application"}\nandroid{namespace "com.reykizen.panel"\ncompileSdk 34\ndefaultConfig{applicationId "com.reykizen.panel"\nminSdk 26\ntargetSdk 34\nversionCode 1\nversionName "1.0"}\ncompileOptions{sourceCompatibility JavaVersion.VERSION_17\ntargetCompatibility JavaVersion.VERSION_17}}\ndependencies{}
