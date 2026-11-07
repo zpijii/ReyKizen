@@ -9,7 +9,7 @@ import android.view.*;
 import android.widget.*;
 import rikka.shizuku.Shizuku;
 public class FloatingPanelService extends Service {
-    private static final int NATIVE_W=2340,NATIVE_H=1080,W43=1440,W11=1080;
+    private static final int NATIVE_W=2340,NATIVE_H=1080,W43=3120,W11=2340;
     private static final int NID=7799;
     private static final String CID="rk";
     private static final int SHIZUKU_CODE=1001;
@@ -75,8 +75,8 @@ public class FloatingPanelService extends Service {
         b11.setLayoutParams(new LinearLayout.LayoutParams(
             0,LinearLayout.LayoutParams.WRAP_CONTENT,1f));
         b43.setTag("43");b11.setTag("11");
-        b43.setOnClickListener(v->{apply(W43,NATIVE_H,"4:3");hl("43",ll);});
-        b11.setOnClickListener(v->{apply(W11,NATIVE_H,"1:1");hl("11",ll);});
+        b43.setOnClickListener(v->{apply(NATIVE_W,W43,"4:3");hl("43",ll);});
+        b11.setOnClickListener(v->{apply(NATIVE_W,W11,"1:1");hl("11",ll);});
         row1.addView(b43);row1.addView(b11);
         ll.addView(row1);
         LinearLayout row2=new LinearLayout(this);
@@ -123,7 +123,7 @@ public class FloatingPanelService extends Service {
     }
     private void apply(int w,int h,String lbl){
         if(!checkShizuku())return;
-        runShellCmd("wm size "+w+"x"+h);
+        runShellCmd("wm size "+h+"x"+w);
         updateStatus(lbl);
     }
     private void applyReset(){
