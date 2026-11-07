@@ -9,7 +9,6 @@ import android.os.Build;
 import android.view.*;
 import android.widget.*;
 import rikka.shizuku.Shizuku;
-import java.lang.reflect.Method;
 public class FloatingPanelService extends Service {
     private static final int NATIVE_W=2340,NATIVE_H=1080;
     private static final int DENSITY_NATIVE=345;
@@ -174,11 +173,10 @@ public class FloatingPanelService extends Service {
     }
     private void runShellCmd(String cmd){
         try{
-            Method m=Shizuku.class.getDeclaredMethod("newProcess",
-                String[].class,String[].class,String.class);
-            m.setAccessible(true);
-            java.lang.Process proc=(java.lang.Process)m.invoke(null,
-                new String[]{"sh","-c",cmd},null,null);
+            java.lang.ProcessBuilder pb=new java.lang.ProcessBuilder(
+                "/data/user/0/moe.shizuku.privileged.api/files/rish","-c",cmd);
+            pb.redirectErrorStream(true);
+            java.lang.Process proc=pb.start();
             proc.waitFor();
         }catch(Exception e){
             Toast.makeText(this,"Err: "+e.getMessage(),Toast.LENGTH_LONG).show();
