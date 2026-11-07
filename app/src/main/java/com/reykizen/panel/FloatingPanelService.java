@@ -3,6 +3,7 @@ import android.app.*;
 import android.content.*;
 import android.graphics.*;
 import android.graphics.PixelFormat;
+import android.graphics.drawable.GradientDrawable;
 import android.os.IBinder;
 import android.os.Build;
 import android.view.*;
@@ -11,6 +12,9 @@ import rikka.shizuku.Shizuku;
 import java.lang.reflect.Method;
 public class FloatingPanelService extends Service {
     private static final int NATIVE_W=2340,NATIVE_H=1080;
+    private static final int DENSITY_NATIVE=345;
+    private static final int DENSITY_43=230;
+    private static final int DENSITY_11=280;
     private static final int NID=7799;
     private static final String CID="rk";
     private static final int SHIZUKU_CODE=1001;
@@ -22,9 +26,9 @@ public class FloatingPanelService extends Service {
     private final Shizuku.OnRequestPermissionResultListener permListener=
         (requestCode,grantResult)->{
             if(grantResult==android.content.pm.PackageManager.PERMISSION_GRANTED)
-                Toast.makeText(this,"Shizuku granted!",Toast.LENGTH_SHORT).show();
+                Toast.makeText(this,"Shizuku OK",Toast.LENGTH_SHORT).show();
             else
-                Toast.makeText(this,"Shizuku denied!",Toast.LENGTH_SHORT).show();
+                Toast.makeText(this,"Shizuku denied",Toast.LENGTH_SHORT).show();
         };
     @Override public int onStartCommand(Intent i,int f,int id){
         return START_STICKY;
@@ -32,15 +36,22 @@ public class FloatingPanelService extends Service {
     @Override public void onCreate(){
         super.onCreate();
         Shizuku.addRequestPermissionResultListener(permListener);
-        mkCh();startForeground(NID,mkNotif());buildPanel();
+        mkCh();
+        startForeground(NID,mkNotif());
+        buildPanel();
+    }
+    private GradientDrawable mkBg(String hex){
+        GradientDrawable d=new GradientDrawable();
+        d.setColor(Color.parseColor(hex));
+        d.setCornerRadius(0f);
+        return d;
     }
     private void buildPanel(){
         wm=(WindowManager)getSystemService(WINDOW_SERVICE);
         LinearLayout ll=new LinearLayout(this);
         ll.setOrientation(LinearLayout.VERTICAL);
-        ll.setBackgroundColor(Color.parseColor("#EE0A0A0A"));
+        ll.setBackground(mkBg("#EE0A0A0A"));
         ll.setPadding(20,14,20,14);
-        // header
         LinearLayout hdr=new LinearLayout(this);
         hdr.setOrientation(LinearLayout.HORIZONTAL);
         hdr.setGravity(Gravity.CENTER_VERTICAL);
@@ -55,16 +66,14 @@ public class FloatingPanelService extends Service {
         dot.setText("●");
         dot.setTextColor(Color.parseColor("#00FF88"));
         dot.setTextSize(10f);
-        // X button — plain TextView, no background, no clip
         TextView min=new TextView(this);
-        min.setText("  X  ");
+        min.setText("  ✕  ");
         min.setTextColor(Color.WHITE);
         min.setTextSize(14f);
         min.setBackground(null);
         min.setOnClickListener(v->stopSelf());
         hdr.addView(ttl);hdr.addView(dot);hdr.addView(min);
         ll.addView(hdr);
-        // divider
         View div=new View(this);
         div.setBackgroundColor(Color.parseColor("#FF2222"));
         LinearLayout.LayoutParams dlp=new LinearLayout.LayoutParams(
@@ -72,7 +81,6 @@ public class FloatingPanelService extends Service {
         dlp.setMargins(0,8,0,8);
         div.setLayoutParams(dlp);
         ll.addView(div);
-        // row 1 buttons
         LinearLayout row1=new LinearLayout(this);
         row1.setOrientation(LinearLayout.HORIZONTAL);
         Button b43=mkBtn("4:3\nClassic","#CC0000");
@@ -88,7 +96,6 @@ public class FloatingPanelService extends Service {
         b11.setOnClickListener(v->{apply11();hl("11",ll);});
         row1.addView(b43);row1.addView(b11);
         ll.addView(row1);
-        // reset
         LinearLayout row2=new LinearLayout(this);
         row2.setOrientation(LinearLayout.HORIZONTAL);
         row2.setPadding(0,6,0,0);
@@ -99,7 +106,6 @@ public class FloatingPanelService extends Service {
         bRst.setOnClickListener(v->{applyReset();hl("none",ll);});
         row2.addView(bRst);
         ll.addView(row2);
-        // status
         TextView st=new TextView(this);
         st.setTag("status");
         st.setText("● Normal");
@@ -134,21 +140,20 @@ public class FloatingPanelService extends Service {
     }
     private void apply43(){
         if(!checkShizuku())return;
-        // stretch 4:3 — set size 2340x3120 then density to match stretch
         runShellCmd("wm size "+NATIVE_W+"x3120");
-        runShellCmd("wm density 320");
+        runShellCmd("wm density "+DENSITY_43);
         updateStatus("4:3");
     }
     private void apply11(){
         if(!checkShizuku())return;
         runShellCmd("wm size "+NATIVE_W+"x2340");
-        runShellCmd("wm density 320");
+        runShellCmd("wm density "+DENSITY_11);
         updateStatus("1:1");
     }
     private void applyReset(){
         if(!checkShizuku())return;
         runShellCmd("wm size reset");
-        runShellCmd("wm density reset");
+        runShellCmd("wm density "+DENSITY_NATIVE);
         updateStatus("Normal");
     }
     private boolean checkShizuku(){
@@ -176,7 +181,7 @@ public class FloatingPanelService extends Service {
                 new String[]{"sh","-c",cmd},null,null);
             proc.waitFor();
         }catch(Exception e){
-            Toast.makeText(this,"Error: "+e.getMessage(),Toast.LENGTH_LONG).show();
+            Toast.makeText(this,"Err: "+e.getMessage(),Toast.LENGTH_LONG).show();
         }
     }
     private void updateStatus(String lbl){
@@ -191,21 +196,22 @@ public class FloatingPanelService extends Service {
         for(String t:new String[]{"43","11"}){
             View v=ll.findViewWithTag(t);
             if(v instanceof Button)
-                ((Button)v).setBackgroundColor(Color.parseColor(
-                    t.equals(tag)?"#CC0000":"#1A1A1A"));
+                ((Button)v).setBackground(mkBg(t.equals(tag)?"#CC0000":"#1A1A1A"));
         }
     }
     private Button mkBtn(String txt,String bg){
         Button b=new Button(this);
-        b.setText(txt);b.setTextColor(Color.WHITE);
-        b.setBackgroundColor(Color.parseColor(bg));
-        b.setTextSize(11f);b.setPadding(8,16,8,16);
+        b.setText(txt);
+        b.setTextColor(Color.WHITE);
+        b.setBackground(mkBg(bg));
+        b.setTextSize(11f);
+        b.setPadding(8,16,8,16);
         return b;
     }
     private void mkCh(){
         if(Build.VERSION.SDK_INT>=26){
             NotificationChannel c=new NotificationChannel(CID,"Rey Kizen",
-                NotificationManager.IMPORTANCE_LOW);
+                NotificationManager.IMPORTANCE_MIN);
             getSystemService(NotificationManager.class)
                 .createNotificationChannel(c);
         }
@@ -215,7 +221,9 @@ public class FloatingPanelService extends Service {
         if(Build.VERSION.SDK_INT>=26)b.setChannelId(CID);
         return b.setContentTitle("Rey Kizen")
             .setContentText("Panel aktif")
-            .setSmallIcon(android.R.drawable.ic_menu_compass).build();
+            .setSmallIcon(android.R.drawable.ic_menu_compass)
+            .setPriority(Notification.PRIORITY_MIN)
+            .build();
     }
     @Override public IBinder onBind(Intent i){return null;}
     @Override public void onDestroy(){
