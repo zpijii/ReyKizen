@@ -8,8 +8,7 @@ import android.os.Build;
 import android.view.*;
 import android.widget.*;
 import rikka.shizuku.Shizuku;
-import rikka.shizuku.ShizukuRemoteProcess;
-import java.io.OutputStream;
+import java.lang.reflect.Method;
 public class FloatingPanelService extends Service {
     private static final int NATIVE_W=2340,NATIVE_H=1080;
     private static final int W43_H=3120,W11_H=2340;
@@ -152,7 +151,10 @@ public class FloatingPanelService extends Service {
     }
     private void runShellCmd(String cmd){
         try{
-            ShizukuRemoteProcess proc=Shizuku.newProcess(
+            Method m=Shizuku.class.getDeclaredMethod("newProcess",
+                String[].class,String[].class,String.class);
+            m.setAccessible(true);
+            java.lang.Process proc=(java.lang.Process)m.invoke(null,
                 new String[]{"sh","-c",cmd},null,null);
             proc.waitFor();
         }catch(Exception e){
