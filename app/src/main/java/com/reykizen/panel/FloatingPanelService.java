@@ -3,7 +3,8 @@ import android.app.*;
 import android.content.*;
 import android.graphics.*;
 import android.graphics.PixelFormat;
-import android.os.*;
+import android.os.IBinder;
+import android.os.Build;
 import android.view.*;
 import android.widget.*;
 import rikka.shizuku.Shizuku;
@@ -122,12 +123,12 @@ public class FloatingPanelService extends Service {
     }
     private void apply(int w,int h,String lbl){
         if(!checkShizuku())return;
-        runShell("wm size "+w+"x"+h);
+        runShellCmd("wm size "+w+"x"+h);
         updateStatus(lbl);
     }
     private void applyReset(){
         if(!checkShizuku())return;
-        runShell("wm size reset");
+        runShellCmd("wm size reset");
         updateStatus("Normal");
     }
     private boolean checkShizuku(){
@@ -146,19 +147,14 @@ public class FloatingPanelService extends Service {
             return false;
         }
     }
-    private void runShell(String cmd){
+    private void runShellCmd(String cmd){
         try{
-            Process p=Runtime.getRuntime().exec(new String[]{"sh","-c",cmd});
-            p.waitFor();
+            java.lang.ProcessBuilder pb=new java.lang.ProcessBuilder("sh","-c",cmd);
+            pb.redirectErrorStream(true);
+            java.lang.Process proc=pb.start();
+            proc.waitFor();
         }catch(Exception e){
-            try{
-                IBinder b=Shizuku.newIBinderShell();
-                IInterface shell=android.os.IInterface.class.cast(
-                    android.os.ServiceManager.class.getMethod("getService",String.class)
-                        .invoke(null,"activity"));
-            }catch(Exception ex){
-                Toast.makeText(this,"Shell error: "+ex.getMessage(),Toast.LENGTH_LONG).show();
-            }
+            Toast.makeText(this,"Error: "+e.getMessage(),Toast.LENGTH_LONG).show();
         }
     }
     private void updateStatus(String lbl){
