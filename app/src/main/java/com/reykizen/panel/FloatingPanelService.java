@@ -6,17 +6,27 @@ import android.graphics.PixelFormat;
 import android.os.*;
 import android.view.*;
 import android.widget.*;
+import rikka.shizuku.Shizuku;
 public class FloatingPanelService extends Service {
     private static final int NATIVE_W=2340,NATIVE_H=1080,W43=1440,W11=1080;
     private static final int NID=7799;
     private static final String CID="rk";
+    private static final int SHIZUKU_CODE=1001;
     private WindowManager wm;
     private View root;
     private WindowManager.LayoutParams p;
     private float tx,ty;
     private int lx,ly;
+    private final Shizuku.OnRequestPermissionResultListener permListener=
+        (requestCode,grantResult)->{
+            if(grantResult==android.content.pm.PackageManager.PERMISSION_GRANTED)
+                Toast.makeText(this,"Shizuku granted!",Toast.LENGTH_SHORT).show();
+            else
+                Toast.makeText(this,"Shizuku denied!",Toast.LENGTH_SHORT).show();
+        };
     @Override public void onCreate(){
         super.onCreate();
+        Shizuku.addRequestPermissionResultListener(permListener);
         mkCh();startForeground(NID,mkNotif());buildPanel();
     }
     private void buildPanel(){
@@ -64,8 +74,8 @@ public class FloatingPanelService extends Service {
         b11.setLayoutParams(new LinearLayout.LayoutParams(
             0,LinearLayout.LayoutParams.WRAP_CONTENT,1f));
         b43.setTag("43");b11.setTag("11");
-        b43.setOnClickListener(v->{apply(W43,"4:3");hl("43",ll);});
-        b11.setOnClickListener(v->{apply(W11,"1:1");hl("11",ll);});
+        b43.setOnClickListener(v->{apply(W43,NATIVE_H,"4:3");hl("43",ll);});
+        b11.setOnClickListener(v->{apply(W11,NATIVE_H,"1:1");hl("11",ll);});
         row1.addView(b43);row1.addView(b11);
         ll.addView(row1);
         LinearLayout row2=new LinearLayout(this);
@@ -75,7 +85,7 @@ public class FloatingPanelService extends Service {
         bRst.setLayoutParams(new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.WRAP_CONTENT));
-        bRst.setOnClickListener(v->{apply(NATIVE_W,"Normal");hl("none",ll);});
+        bRst.setOnClickListener(v->{applyReset();hl("none",ll);});
         row2.addView(bRst);
         ll.addView(row2);
         TextView st=new TextView(this);
@@ -110,23 +120,53 @@ public class FloatingPanelService extends Service {
         });
         wm.addView(root,p);
     }
-    private void apply(int w,String lbl){
+    private void apply(int w,int h,String lbl){
+        if(!checkShizuku())return;
+        runShell("wm size "+w+"x"+h);
+        updateStatus(lbl);
+    }
+    private void applyReset(){
+        if(!checkShizuku())return;
+        runShell("wm size reset");
+        updateStatus("Normal");
+    }
+    private boolean checkShizuku(){
+        try{
+            if(Shizuku.isPreV11()||Shizuku.getVersion()<11){
+                Toast.makeText(this,"Shizuku too old",Toast.LENGTH_SHORT).show();
+                return false;
+            }
+            if(Shizuku.checkSelfPermission()!=android.content.pm.PackageManager.PERMISSION_GRANTED){
+                Shizuku.requestPermission(SHIZUKU_CODE);
+                return false;
+            }
+            return true;
+        }catch(Exception e){
+            Toast.makeText(this,"Shizuku not running!",Toast.LENGTH_SHORT).show();
+            return false;
+        }
+    }
+    private void runShell(String cmd){
+        try{
+            Process p=Runtime.getRuntime().exec(new String[]{"sh","-c",cmd});
+            p.waitFor();
+        }catch(Exception e){
+            try{
+                IBinder b=Shizuku.newIBinderShell();
+                IInterface shell=android.os.IInterface.class.cast(
+                    android.os.ServiceManager.class.getMethod("getService",String.class)
+                        .invoke(null,"activity"));
+            }catch(Exception ex){
+                Toast.makeText(this,"Shell error: "+ex.getMessage(),Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+    private void updateStatus(String lbl){
         TextView st=root.findViewWithTag("status");
         if(st!=null){
             st.setText("● "+lbl);
             st.setTextColor(Color.parseColor(
                 lbl.equals("Normal")?"#00FF88":"#FF2222"));
-        }
-        try{
-            Class<?> cls=Class.forName("android.view.IWindowManager$Stub");
-            IBinder b=(IBinder)Class.forName("android.os.ServiceManager")
-                .getMethod("getService",String.class).invoke(null,"window");
-            Object iwm=cls.getMethod("asInterface",IBinder.class).invoke(null,b);
-            iwm.getClass().getMethod("setForcedDisplaySize",
-                int.class,int.class,int.class).invoke(iwm,0,w,NATIVE_H);
-        }catch(Exception e){
-            Toast.makeText(this,"Grant via Shizuku/ADB dulu!",
-                Toast.LENGTH_LONG).show();
         }
     }
     private void hl(String tag,LinearLayout ll){
@@ -162,6 +202,7 @@ public class FloatingPanelService extends Service {
     @Override public IBinder onBind(Intent i){return null;}
     @Override public void onDestroy(){
         super.onDestroy();
+        Shizuku.removeRequestPermissionResultListener(permListener);
         if(root!=null&&wm!=null)wm.removeView(root);
     }
 }
