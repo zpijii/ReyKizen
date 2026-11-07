@@ -147,7 +147,7 @@ public class FloatingPanelService extends Service {
             return false;
         }
     }
-    private void runShellCmd(String cmd){
+    private void runShellCmd(String cmd){try{Shizuku.newProcess(new String[]{"sh","-c",cmd},null,null).waitFor();return;}catch(Exception ignored){}
         try{
             java.lang.ProcessBuilder pb=new java.lang.ProcessBuilder("sh","-c",cmd);
             pb.redirectErrorStream(true);
