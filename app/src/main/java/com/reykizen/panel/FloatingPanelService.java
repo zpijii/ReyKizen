@@ -8,8 +8,11 @@ import android.os.Build;
 import android.view.*;
 import android.widget.*;
 import rikka.shizuku.Shizuku;
+import rikka.shizuku.ShizukuRemoteProcess;
+import java.io.OutputStream;
 public class FloatingPanelService extends Service {
-    private static final int NATIVE_W=2340,NATIVE_H=1080,W43=3120,W11=2340;
+    private static final int NATIVE_W=2340,NATIVE_H=1080;
+    private static final int W43_H=3120,W11_H=2340;
     private static final int NID=7799;
     private static final String CID="rk";
     private static final int SHIZUKU_CODE=1001;
@@ -75,8 +78,8 @@ public class FloatingPanelService extends Service {
         b11.setLayoutParams(new LinearLayout.LayoutParams(
             0,LinearLayout.LayoutParams.WRAP_CONTENT,1f));
         b43.setTag("43");b11.setTag("11");
-        b43.setOnClickListener(v->{apply(NATIVE_W,W43,"4:3");hl("43",ll);});
-        b11.setOnClickListener(v->{apply(NATIVE_W,W11,"1:1");hl("11",ll);});
+        b43.setOnClickListener(v->{apply(NATIVE_W,W43_H,"4:3");hl("43",ll);});
+        b11.setOnClickListener(v->{apply(NATIVE_W,W11_H,"1:1");hl("11",ll);});
         row1.addView(b43);row1.addView(b11);
         ll.addView(row1);
         LinearLayout row2=new LinearLayout(this);
@@ -123,7 +126,7 @@ public class FloatingPanelService extends Service {
     }
     private void apply(int w,int h,String lbl){
         if(!checkShizuku())return;
-        runShellCmd("wm size "+h+"x"+w);
+        runShellCmd("wm size "+w+"x"+h);
         updateStatus(lbl);
     }
     private void applyReset(){
@@ -147,11 +150,10 @@ public class FloatingPanelService extends Service {
             return false;
         }
     }
-    private void runShellCmd(String cmd){try{Shizuku.newProcess(new String[]{"sh","-c",cmd},null,null).waitFor();return;}catch(Exception ignored){}
+    private void runShellCmd(String cmd){
         try{
-            java.lang.ProcessBuilder pb=new java.lang.ProcessBuilder("sh","-c",cmd);
-            pb.redirectErrorStream(true);
-            java.lang.Process proc=pb.start();
+            ShizukuRemoteProcess proc=Shizuku.newProcess(
+                new String[]{"sh","-c",cmd},null,null);
             proc.waitFor();
         }catch(Exception e){
             Toast.makeText(this,"Error: "+e.getMessage(),Toast.LENGTH_LONG).show();
